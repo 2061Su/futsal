@@ -20,6 +20,9 @@ Booking.belongsTo(Futsal, { foreignKey: 'futsalId' });
 User.hasOne(Futsal, { foreignKey: 'ownerId', as: 'OwnedFutsal' });
 Futsal.belongsTo(User, { foreignKey: 'ownerId', as: 'Owner' });
 
+User.hasMany(Futsal, { foreignKey: 'ownerId', onDelete: 'CASCADE' });
+Futsal.belongsTo(User, { foreignKey: 'ownerId' });
+
 const app = express();
 app.use(cors());
 app.use(express.json());

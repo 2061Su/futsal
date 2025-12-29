@@ -13,38 +13,37 @@ const OwnerDashboard = () => {
   const token = localStorage.getItem('token');
 
   const fetchOwnerData = async () => {
-    try {
-      setLoading(true);
-      // Ensure we have a valid userId from localStorage
-      if (!userId) {
-        toast.error("User ID not found. Please log in again.");
-        return;
-      }
+  try {
+    setLoading(true);
+    if (!userId) return;
 
-      // 1. Get futsals
-      const futsalRes = await axios.get('http://localhost:5000/api/futsals');
-      
-      // 2. Find the specific ground owned by this logged-in user
+    const futsalRes = await axios.get('http://localhost:5000/api/futsals/all');
+    
+    // Safety check: Ensure data is an array before calling .find()
+    if (futsalRes.data && Array.isArray(futsalRes.data)) {
       const myGround = futsalRes.data.find(f => String(f.ownerId) === String(userId));
       
       if (myGround) {
         setMyFutsal(myGround);
+
         
-        // 3. Fetch ONLY this ground's bookings
         const bookingRes = await axios.get(`http://localhost:5000/api/bookings/futsal/${myGround.id}`);
-        setBookings(bookingRes.data);
+        setBookings(Array.isArray(bookingRes.data) ? bookingRes.data : []);
       } else {
-        // If no ground is found, we set this to null so the Setup Form shows
+
         setMyFutsal(null);
-        setBookings([]);
       }
-    } catch (error) {
-      console.error("Owner Dashboard Error:", error);
-      toast.error("Failed to sync your dashboard data.");
-    } finally {
-      setLoading(false);
     }
-  };
+  } catch (error) {
+    console.error("Owner Dashboard Error:", error);
+    // Only show toast if it's a real error, not just a 404 (no ground yet)
+    if (error.response?.status !== 404) {
+      toast.error("Dashboard sync failed. Check server connection.");
+    }
+  } finally {
+    setLoading(false);
+  }
+};
 
   useEffect(() => {
     if (userId) fetchOwnerData();
@@ -89,6 +88,22 @@ const OwnerDashboard = () => {
       <NavBar />
       
       <div className="max-w-7xl mx-auto p-6">
+
+        {myFutsal.status === 'Pending' && (
+          <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-8 rounded-r-lg shadow-sm">
+            <div className="flex items-center">
+              <div className="flex-shrink-0">
+                <span className="text-yellow-400 text-xl">⚠️</span>
+              </div>
+              <div className="ml-3">
+                <p className="text-sm text-yellow-700 font-semibold">
+                  Under Review: <span className="font-normal text-yellow-600">Your ground is currently being reviewed by the Admin. It will be visible to players once approved.</span>
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Header Section */}
         <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
           <div>
