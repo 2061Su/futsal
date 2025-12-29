@@ -17,6 +17,9 @@ Booking.belongsTo(User, { foreignKey: 'userId' });
 Futsal.hasMany(Booking, { foreignKey: 'futsalId' });
 Booking.belongsTo(Futsal, { foreignKey: 'futsalId' });
 
+User.hasOne(Futsal, { foreignKey: 'ownerId', as: 'OwnedFutsal' });
+Futsal.belongsTo(User, { foreignKey: 'ownerId', as: 'Owner' });
+
 const app = express();
 app.use(cors());
 app.use(express.json());

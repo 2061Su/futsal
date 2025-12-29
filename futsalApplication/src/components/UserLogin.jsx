@@ -28,6 +28,8 @@ const UserLogin = () => {
       if (response.data.user.role === 'Player') {
         navigate('/player-dashboard');
       } else if (response.data.user.role === 'FutsalAdmin') {
+        navigate('/owner-dashboard'); // Redirect to the separate file
+      } else if (response.data.user.role === 'Admin') {
         navigate('/admin-dashboard');
       }
 

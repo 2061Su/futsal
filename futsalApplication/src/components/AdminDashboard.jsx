@@ -47,7 +47,14 @@ const AdminDashboard = () => {
                   <td className="p-4">
                     <div className="font-bold text-gray-800">{b.User?.name}</div>
                     <div className="text-sm text-blue-600 font-medium">
-                      📞 {b.User?.phone || 'No phone set'}
+                      {/* If a phone exists, make it a clickable "tel:" link */}
+                      {b.User?.phone ? (
+                        <a href={`tel:${b.User.phone}`} className="hover:underline flex items-center gap-1">
+                          📞 {b.User.phone}
+                        </a>
+                      ) : (
+                        <span className="text-gray-400">📞 No phone set</span>
+                      )}
                     </div>
                   </td>
                   

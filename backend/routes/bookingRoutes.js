@@ -4,60 +4,17 @@ const Booking = require('../models/Booking');
 const Futsal = require('../models/Futsal');
 const User = require('../models/User');
 
-
-
-router.get('/user/:userId', async (req, res) => {
-  let { userId } = req.params;
-  
-  // If the frontend sends the string "undefined", this fails
-  if (!userId || userId === "undefined" || userId === "null") {
-    return res.status(400).json({ message: "Valid User ID is required" });
-  }
-
-  try {
-    const bookings = await Booking.findAll({
-      where: { userId: Number(userId) }, // Use Number() for safety
-      include: [{ model: Futsal }]
-    });
-    res.json(bookings);
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
-});
-
-
-router.post('/', async (req, res) => {
-  console.log("--- BOOKING ATTEMPT ---");
-  console.log("Data received:", req.body); // Check if userId is here
-  
-  try {
-    const { futsalId, date, timeSlot, userId } = req.body;
-    
-    // Log specifically what is being sent to the create method
-    const newBooking = await Booking.create({
-      futsalId: parseInt(futsalId),
-      userId: userId ? parseInt(userId) : null, // Catch null IDs
-      date,
-      timeSlot,
-      status: 'Pending'
-    });
-    
-    console.log("Successfully saved booking ID:", newBooking.id, "for User:", newBooking.userId);
-    res.status(201).json(newBooking);
-  } catch (err) {
-    console.error("Save error:", err);
-    res.status(500).json({ message: err.message });
-  }
-});
-
-
-// 1. GET all bookings (Admin view)
+// ==========================================
+// 1. ADMIN ROUTE: Get ALL bookings (System Admin Only)
+// ==========================================
 router.get('/', async (req, res) => {
-  
   try {
     const allBookings = await Booking.findAll({
-      include: [Futsal, User], // Join both so admin sees WHO booked WHICH court
-      order: [['createdAt', 'DESC']] // Newest requests first
+      include: [
+        { model: Futsal, attributes: ['name', 'location'] },
+        { model: User, attributes: ['name', 'phone', 'email'] }
+      ],
+      order: [['createdAt', 'DESC']]
     });
     res.json(allBookings);
   } catch (err) {
@@ -65,10 +22,82 @@ router.get('/', async (req, res) => {
   }
 });
 
-// 2. UPDATE booking status (Approve/Reject)
+// ==========================================
+// 2. OWNER ROUTE: Get bookings for a SPECIFIC Futsal
+// ==========================================
+router.get('/futsal/:futsalId', async (req, res) => {
+  try {
+    const { futsalId } = req.params;
+    const bookings = await Booking.findAll({
+      where: { futsalId: futsalId },
+      include: [
+        { model: User, attributes: ['name', 'phone', 'email'] },
+        { model: Futsal, attributes: ['name'] }
+      ],
+      order: [['createdAt', 'DESC']]
+    });
+    res.json(bookings);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// ==========================================
+// 3. PLAYER ROUTE: Get bookings for a SPECIFIC User
+// ==========================================
+router.get('/user/:userId', async (req, res) => {
+  let { userId } = req.params;
+  
+
+  if (!userId || userId === "undefined" || userId === "null") {
+    return res.status(400).json({ message: "Valid User ID is required" });
+  }
+
+  try {
+    const bookings = await Booking.findAll({
+      where: { userId: Number(userId) },
+      include: [{ model: Futsal, attributes: ['name', 'location', 'contact'] }],
+      order: [['date', 'DESC']]
+    });
+    res.json(bookings);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// ==========================================
+// 4. CREATE: Create a new booking
+// ==========================================
+router.post('/', async (req, res) => {
+
+
+  try {
+    const { futsalId, date, timeSlot, userId } = req.body;
+    
+
+    const newBooking = await Booking.create({
+      futsalId: parseInt(futsalId),
+      userId: userId ? parseInt(userId) : null,
+      date,
+      timeSlot,
+      status: 'Pending'
+    });
+    
+
+    res.status(201).json(newBooking);
+
+
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// ==========================================
+// 5. UPDATE: Approve or Reject a booking
+// ==========================================
 router.patch('/:id', async (req, res) => {
   try {
-    const { status } = req.body; // Expecting 'Confirmed' or 'Rejected'
+    const { status } = req.body; // 'Confirmed' or 'Rejected'
     const booking = await Booking.findByPk(req.params.id);
     
     if (!booking) return res.status(404).json({ message: "Booking not found" });
@@ -82,7 +111,9 @@ router.patch('/:id', async (req, res) => {
   }
 });
 
-// Cancel/Delete Booking
+// ==========================================
+// 6. DELETE: Cancel a booking
+// ==========================================
 router.delete('/:id', async (req, res) => {
   try {
     const booking = await Booking.findByPk(req.params.id);

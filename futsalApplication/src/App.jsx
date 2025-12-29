@@ -9,6 +9,7 @@ import BookingForm from './components/BookingForm';
 import PlayerDashboard from './components/PlayerDashboard';
 import MyBookings from './components/MyBookings';
 import AdminDashboard from './components/AdminDashboard';
+import OwnerDashboard from './components/OwnerDashboard';
 import ProtectedRoute from './components/ProtectedRoute';
 import { Toaster } from 'react-hot-toast';
 import Profile from './components/Profile';
@@ -36,14 +37,30 @@ function App() {
         <Route path="/book/:id" element={<BookingForm />} />
         <Route path="/my-bookings" element={<MyBookings />} />
         <Route path="/profile" element={<Profile />} />
+
+
+        {/* Admin Route */}
         <Route 
           path="/admin-dashboard" 
           element={
-            <ProtectedRoute allowedRoles={['FutsalAdmin', 'Admin']}>
+            <ProtectedRoute allowedRoles={['Admin']}>
               <AdminDashboard />
             </ProtectedRoute>
           } 
         />
+
+
+        {/* Futsal Owner Route */}
+          <Route 
+            path="/owner-dashboard" 
+            element={
+              <ProtectedRoute allowedRoles={['FutsalAdmin']}>
+                <OwnerDashboard /> 
+              </ProtectedRoute>
+            } 
+          />
+          
+        
 
         <Route path="/" element={<UserLogin />} />
       </Routes>

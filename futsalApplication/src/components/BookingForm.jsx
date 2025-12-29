@@ -8,11 +8,13 @@ const BookingForm = () => {
   const navigate = useNavigate();
   const [futsal, setFutsal] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  // Added phone to the state
   const [bookingData, setBookingData] = useState({
     date: '',
-    timeSlot: ''
+    timeSlot: '',
+    phone: '' 
   });
-
 
   const timeSlots = [
     "06:00 AM - 07:00 AM", "07:00 AM - 08:00 AM", "08:00 AM - 09:00 AM",
@@ -20,24 +22,32 @@ const BookingForm = () => {
   ];
 
   useEffect(() => {
-    const fetchFutsalDetails = async () => {
+    const userId = localStorage.getItem('userId');
+    
+    const fetchInitialData = async () => {
       try {
-        const response = await axios.get(`http://localhost:5000/api/futsals/${id}`);
-        setFutsal(response.data);
+        // 1. Fetch Futsal Details
+        const futsalRes = await axios.get(`http://localhost:5000/api/futsals/${id}`);
+        setFutsal(futsalRes.data);
+
+        // 2. Fetch User Profile to auto-fill phone number
+        if (userId) {
+          const userRes = await axios.get(`http://localhost:5000/api/auth/user/${userId}`);
+          setBookingData(prev => ({ ...prev, phone: userRes.data.phone || '' }));
+        }
       } catch (error) {
-        toast.error("Could not load futsal details");
+        toast.error("Error loading details");
       }
     };
-    fetchFutsalDetails();
+    fetchInitialData();
   }, [id]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setIsSubmitting(true); // Disable button to prevent double clicks
+    setIsSubmitting(true);
     
     const token = localStorage.getItem('token');
-    const userId = localStorage.getItem('userId'); // <--- Retrieve the dynamic ID
-    console.log("Current User ID is:", userId);
+    const userId = localStorage.getItem('userId');
     
     if (!token || !userId) {
       toast.error("Please login to book");
@@ -45,24 +55,27 @@ const BookingForm = () => {
     }
 
     try {
+      // We send the data to the booking API
       await axios.post('http://localhost:5000/api/bookings', {
         futsalId: id,
-        userId: userId, // <--- IS THIS LINE HERE?
+        userId: userId,
         date: bookingData.date,
-        timeSlot: bookingData.timeSlot
+        timeSlot: bookingData.timeSlot,
+        phone: bookingData.phone // Optional: Send phone if you want to store it per booking
       }, {
         headers: { Authorization: `Bearer ${token}` }
       });
 
-      toast.success("Booking Request Sent!");
+      // Optional: If they updated their phone here, also update their profile
+      await axios.put(`http://localhost:5000/api/auth/profile/${userId}`, {
+        phone: bookingData.phone
+      });
 
-      // Wait 1.5 seconds so they see the toast before the page changes
-      setTimeout(() => {
-        navigate('/my-bookings'); 
-      }, 1500);
+      toast.success("Booking Request Sent!");
+      setTimeout(() => navigate('/my-bookings'), 1500);
 
     } catch (error) {
-      setIsSubmitting(false); // Re-enable button so user can try again
+      setIsSubmitting(false);
       toast.error(error.response?.data?.message || "Something went wrong");
     }
   };
@@ -76,6 +89,19 @@ const BookingForm = () => {
         <p className="text-gray-600 mb-6">📍 {futsal.location} | Rs. {futsal.pricePerHour}/hr</p>
 
         <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Phone Number Field */}
+          <div>
+            <label className="block text-sm font-semibold mb-1">Contact Number (for Admin to call you)</label>
+            <input 
+              type="text" 
+              required
+              placeholder="Enter your phone number"
+              className="w-full p-2 border rounded focus:ring-2 focus:ring-green-500 outline-none"
+              value={bookingData.phone}
+              onChange={(e) => setBookingData({...bookingData, phone: e.target.value})}
+            />
+          </div>
+
           <div>
             <label className="block text-sm font-semibold mb-1">Select Date</label>
             <input 
@@ -109,11 +135,7 @@ const BookingForm = () => {
             {isSubmitting ? "Processing..." : "Confirm Booking"}
           </button>
           
-          <button 
-            type="button"
-            onClick={() => navigate('/player-dashboard')}
-            className="w-full text-gray-500 text-sm py-1"
-          >
+          <button type="button" onClick={() => navigate('/player-dashboard')} className="w-full text-gray-500 text-sm py-1">
             Cancel
           </button>
         </form>
