@@ -31,6 +31,11 @@ const Futsal = sequelize.define('Futsal', {
     type: DataTypes.ENUM('Pending', 'Approved', 'Rejected'),
     defaultValue: 'Pending' 
   },
+  imageUrl: {
+  type: DataTypes.STRING,
+  allowNull: true, // Optional, in case they don't upload one
+  defaultValue: 'https://via.placeholder.com/400x250?text=No+Image+Available'
+},
   // Link to the user who owns it
   ownerId: {
     type: DataTypes.INTEGER,

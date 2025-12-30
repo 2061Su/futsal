@@ -11,8 +11,22 @@ const Booking = sequelize.define('Booking', {
     allowNull: false
   },
   status: {
-    type: DataTypes.STRING,
+    type: DataTypes.ENUM('Pending', 'Confirmed', 'Rejected'), // Using ENUM for stricter data
     defaultValue: 'Pending'
+  },
+  phone: {
+    type: DataTypes.STRING,
+    allowNull: false
+  },
+  // Foreign Keys (Sequelize usually creates these via associations, 
+  // but defining them here makes queries more predictable)
+  futsalId: {
+    type: DataTypes.INTEGER,
+    allowNull: false
+  },
+  userId: {
+    type: DataTypes.INTEGER,
+    allowNull: false
   }
 });
 

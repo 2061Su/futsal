@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const Futsal = require('../models/Futsal');
+const { upload } = require('../config/cloudinary');
 
 // 1. GET ALL (Must be at the TOP)
 router.get('/all', async (req, res) => {
@@ -26,15 +27,18 @@ router.get('/', async (req, res) => {
 });
 
 // 3. POST - Add new ground
-router.post('/add', async (req, res) => {
+router.post('/add', upload.single('image'), async (req, res) => {
   try {
     const { name, location, openingTime, closingTime, contact, pricePerHour, ownerId } = req.body;
 
-    
+    // Check if owner already has a ground
     const existing = await Futsal.findOne({ where: { ownerId } });
     if (existing) {
       return res.status(400).json({ message: "You already have a futsal registered." });
     }
+
+    // Get the image path from Cloudinary (provided by multer)
+    const imageUrl = req.file ? req.file.path : 'https://via.placeholder.com/400x250?text=No+Image+Available';
 
     const newFutsal = await Futsal.create({
       name,
@@ -42,13 +46,16 @@ router.post('/add', async (req, res) => {
       openingTime,
       closingTime,
       contact,
-      pricePerHour,
-      ownerId: parseInt(ownerId),
-      status: 'Pending' // Default status
+      // Use Number() to safely handle strings or empty values
+      pricePerHour: Number(pricePerHour) || 0, 
+      ownerId: Number(ownerId),
+      imageUrl: imageUrl,
+      status: 'Pending' 
     });
 
     res.status(201).json(newFutsal);
   } catch (err) {
+    console.error("Error creating futsal:", err);
     res.status(400).json({ message: err.message });
   }
 });
