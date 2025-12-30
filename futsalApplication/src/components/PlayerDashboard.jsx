@@ -72,7 +72,7 @@ const PlayerDashboard = () => {
               </div>
 
               {/* DETAILS SECTION */}
-              <div className="p-5 flex-grow">
+              <div className="p-5 flex-1">
                 <div className="flex justify-between items-start mb-2">
                   <h3 className="text-xl font-bold text-gray-800">{futsal.name}</h3>
                 </div>
