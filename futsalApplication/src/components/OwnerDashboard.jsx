@@ -8,65 +8,79 @@ const OwnerDashboard = () => {
   const [bookings, setBookings] = useState([]);
   const [myFutsal, setMyFutsal] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
   
   const userId = localStorage.getItem('userId');
-  const token = localStorage.getItem('token');
 
+  
   const fetchOwnerData = async () => {
-  try {
-    setLoading(true);
-    if (!userId) return;
+    try {
+      setLoading(true);
+      if (!userId) return;
 
-    const futsalRes = await axios.get('http://localhost:5000/api/futsals/all');
-    
-    // Safety check: Ensure data is an array before calling .find()
-    if (futsalRes.data && Array.isArray(futsalRes.data)) {
-      const myGround = futsalRes.data.find(f => String(f.ownerId) === String(userId));
+      const futsalRes = await axios.get('http://localhost:5000/api/futsals/all');
       
-      if (myGround) {
-        setMyFutsal(myGround);
-
+      if (futsalRes.data && Array.isArray(futsalRes.data)) {
+        const myGround = futsalRes.data.find(f => String(f.ownerId) === String(userId));
         
-        const bookingRes = await axios.get(`http://localhost:5000/api/bookings/futsal/${myGround.id}`);
-        setBookings(Array.isArray(bookingRes.data) ? bookingRes.data : []);
-      } else {
-
-        setMyFutsal(null);
+        if (myGround) {
+          setMyFutsal(myGround);
+          const bookingRes = await axios.get(`http://localhost:5000/api/bookings/futsal/${myGround.id}`);
+          setBookings(Array.isArray(bookingRes.data) ? bookingRes.data : []);
+        } else {
+          setMyFutsal(null);
+        }
       }
+    } catch (error) {
+      console.error("Owner Dashboard Error:", error);
+      if (error.response?.status !== 404) {
+        toast.error("Dashboard sync failed. Check server connection.");
+      }
+    } finally {
+      setLoading(false);
     }
-  } catch (error) {
-    console.error("Owner Dashboard Error:", error);
-    // Only show toast if it's a real error, not just a 404 (no ground yet)
-    if (error.response?.status !== 404) {
-      toast.error("Dashboard sync failed. Check server connection.");
-    }
-  } finally {
-    setLoading(false);
-  }
-};
+  };
 
   useEffect(() => {
     if (userId) fetchOwnerData();
   }, [userId]);
 
+  // FILTER LOGIC
+  const filteredBookings = bookings.filter(b => 
+    b.User?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    b.User?.phone?.includes(searchTerm)
+  );
+
   const handleStatusUpdate = async (id, newStatus) => {
     try {
       await axios.patch(`http://localhost:5000/api/bookings/${id}`, { status: newStatus });
       toast.success(`Booking marked as ${newStatus}`);
-      fetchOwnerData(); // Refresh data
+      fetchOwnerData(); 
     } catch (error) {
       toast.error("Update failed");
     }
   };
 
-  // Calculate total revenue from Confirmed bookings
+  // NEW: DELETE FUNCTION FOR OWNER
+  const handleDeleteBooking = async (id) => {
+    if (window.confirm("Do you want to delete this booking?")) {
+      try {
+        await axios.delete(`http://localhost:5000/api/bookings/${id}`);
+        toast.success("Booking deleted successfully");
+        fetchOwnerData(); // Refresh the list
+      } catch (error) {
+        toast.error("Failed to delete booking");
+      }
+    }
+  };
+
   const totalRevenue = bookings
     .filter(b => b.status === 'Confirmed')
     .length * (myFutsal?.pricePerHour || 0);
 
-  if (loading) return <div className="flex justify-center items-center h-screen">Loading Owner Space...</div>;
+  if (loading) return <div className="flex justify-center items-center h-screen font-bold text-green-600 italic">Loading Owner Space...</div>;
 
-  // STEP 1: If owner hasn't registered a futsal yet
+
   if (!myFutsal) {
     return (
       <div className="min-h-screen bg-gray-100">
@@ -82,7 +96,7 @@ const OwnerDashboard = () => {
     );
   }
 
-  // STEP 2: If owner has a futsal, show the management dashboard
+
   return (
     <div className="min-h-screen bg-gray-50">
       <NavBar />
@@ -91,16 +105,9 @@ const OwnerDashboard = () => {
 
         {myFutsal.status === 'Pending' && (
           <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-8 rounded-r-lg shadow-sm">
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <span className="text-yellow-400 text-xl">⚠️</span>
-              </div>
-              <div className="ml-3">
-                <p className="text-sm text-yellow-700 font-semibold">
-                  Under Review: <span className="font-normal text-yellow-600">Your ground is currently being reviewed by the Admin. It will be visible to players once approved.</span>
-                </p>
-              </div>
-            </div>
+            <p className="text-sm text-yellow-700 font-semibold">
+              ⚠️ Under Review: <span className="font-normal">Your ground is currently being reviewed by Admin.</span>
+            </p>
           </div>
         )}
 
@@ -111,7 +118,7 @@ const OwnerDashboard = () => {
             <p className="text-gray-500">📍 {myFutsal.location} | Rs. {myFutsal.pricePerHour}/hr</p>
           </div>
           
-          {/* Stats Cards */}
+
           <div className="flex gap-4">
             <div className="bg-white p-4 rounded-xl shadow-sm border-l-4 border-green-500 w-40">
               <p className="text-xs text-gray-500 uppercase font-bold">Total Revenue</p>
@@ -121,6 +128,20 @@ const OwnerDashboard = () => {
               <p className="text-xs text-gray-500 uppercase font-bold">Total Bookings</p>
               <p className="text-xl font-bold text-gray-800">{bookings.length}</p>
             </div>
+          </div>
+        </div>
+
+        {/* SEARCH BAR */}
+        <div className="mb-6 max-w-md">
+          <div className="relative">
+            <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400">🔍</span>
+            <input 
+              type="text" 
+              placeholder="Search by customer name or phone..." 
+              className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg leading-5 bg-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 sm:text-sm shadow-sm"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
           </div>
         </div>
 
@@ -141,8 +162,8 @@ const OwnerDashboard = () => {
                 </tr>
               </thead>
               <tbody>
-                {bookings.length > 0 ? (
-                  bookings.map((b) => (
+                {filteredBookings.length > 0 ? (
+                  filteredBookings.map((b) => (
                     <tr key={b.id} className="border-b border-gray-100 hover:bg-gray-50 transition">
                       <td className="p-4">
                         <p className="font-bold text-gray-800">{b.User?.name}</p>
@@ -163,31 +184,42 @@ const OwnerDashboard = () => {
                         </span>
                       </td>
                       <td className="p-4">
-                        {b.status === 'Pending' ? (
-                          <div className="flex gap-2">
-                            <button 
-                              onClick={() => handleStatusUpdate(b.id, 'Confirmed')}
-                              className="bg-green-600 hover:bg-green-700 text-white px-4 py-1.5 rounded-lg text-sm font-semibold transition"
-                            >
-                              Approve
-                            </button>
-                            <button 
-                              onClick={() => handleStatusUpdate(b.id, 'Rejected')}
-                              className="bg-white border border-red-200 text-red-600 hover:bg-red-50 px-4 py-1.5 rounded-lg text-sm font-semibold transition"
-                            >
-                              Reject
-                            </button>
-                          </div>
-                        ) : (
-                          <span className="text-gray-400 text-sm italic">Decision Made</span>
-                        )}
+                        <div className="flex items-center gap-3">
+                          {b.status === 'Pending' ? (
+                            <div className="flex gap-2">
+                              <button 
+                                onClick={() => handleStatusUpdate(b.id, 'Confirmed')}
+                                className="bg-green-600 hover:bg-green-700 text-white px-4 py-1.5 rounded-lg text-sm font-semibold transition"
+                              >
+                                Approve
+                              </button>
+                              <button 
+                                onClick={() => handleStatusUpdate(b.id, 'Rejected')}
+                                className="bg-white border border-red-200 text-red-600 hover:bg-red-50 px-4 py-1.5 rounded-lg text-sm font-semibold transition"
+                              >
+                                Reject
+                              </button>
+                            </div>
+                          ) : (
+                            <span className="text-gray-400 text-sm italic">Decision Made</span>
+                          )}
+
+                          {/* DELETE BUTTON (Always visible for Owners) */}
+                          <button 
+                            onClick={() => handleDeleteBooking(b.id)}
+                            className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-full transition"
+                            title="Delete Booking"
+                          >
+                            🗑️
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))
                 ) : (
                   <tr>
-                    <td colSpan="4" className="p-10 text-center text-gray-400">
-                      No bookings found for your ground yet.
+                    <td colSpan="4" className="p-10 text-center text-gray-400 font-medium">
+                      {searchTerm ? `No results for "${searchTerm}"` : "No bookings found for your ground yet."}
                     </td>
                   </tr>
                 )}

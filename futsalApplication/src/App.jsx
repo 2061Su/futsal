@@ -33,9 +33,23 @@ function App() {
         <Route path="/forgot-password" element={<UserForgetP />} />
 
         {/* You will add your Dashboard routes here later */}
-        <Route path="/player-dashboard" element={<PlayerDashboard />} />
+        <Route 
+          path="/player-dashboard" 
+          element={
+            <ProtectedRoute allowedRoles={['Player', 'FutsalAdmin', 'Admin']}>
+              <PlayerDashboard />
+            </ProtectedRoute>
+          } 
+        />
         <Route path="/book/:id" element={<BookingForm />} />
-        <Route path="/my-bookings" element={<MyBookings />} />
+        <Route 
+          path="/my-bookings" 
+          element={
+            <ProtectedRoute allowedRoles={['Player']}>
+              <MyBookings />
+            </ProtectedRoute>
+          } 
+        />
         <Route path="/profile" element={<Profile />} />
 
 
