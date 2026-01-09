@@ -22,7 +22,7 @@ function App() {
     <>
     <Toaster position="top-center" reverseOrder={false} />
     <Router>
-      <Toaster position="top-center" reverseOrder={false} />
+      
       <Routes>
         {/* Default route redirects to login */}
         <Route path="/" element={<Navigate to="/login" />} />

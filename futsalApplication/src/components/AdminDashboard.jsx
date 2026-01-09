@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
-import { toast } from 'react-hot-toast';
+import { toast, Toaster } from 'react-hot-toast';
 import NavBar from './NavBar';
 
 const AdminDashboard = () => {
@@ -8,8 +8,10 @@ const AdminDashboard = () => {
   const [futsalRequests, setFutsalRequests] = useState([]);
   const [activeTab, setActiveTab] = useState('bookings'); 
   const [searchTerm, setSearchTerm] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
   const fetchData = async () => {
+    setIsLoading(true);
     try {
       const futsalRes = await axios.get('http://localhost:5000/api/futsals/all');
       setFutsalRequests(futsalRes.data);
@@ -18,7 +20,9 @@ const AdminDashboard = () => {
       setBookings(bookingRes.data);
     } catch (error) {
       console.error("Admin Fetch Error:", error);
-      toast.error("Failed to load data");
+      toast.error("Failed to load dashboard data");
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -26,7 +30,7 @@ const AdminDashboard = () => {
     fetchData();
   }, []);
 
-  // --- FILTER LOGIC ---
+  
   const filteredBookings = bookings.filter(b => 
     b.User?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     b.User?.phone?.includes(searchTerm) ||
@@ -39,18 +43,17 @@ const AdminDashboard = () => {
     f.location?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  // --- HANDLERS ---
+
   const handleBookingUpdate = async (id, newStatus) => {
     try {
       await axios.patch(`http://localhost:5000/api/bookings/${id}`, { status: newStatus });
-      toast.success(`Booking ${newStatus}`);
+      toast.success(`Booking ${newStatus} successfully`);
       fetchData();
     } catch (error) {
       toast.error("Update failed");
     }
   };
 
-  
   const handleFutsalVerify = async (id, newStatus) => {
     try {
       await axios.patch(`http://localhost:5000/api/futsals/verify/${id}`, { status: newStatus });
@@ -61,159 +64,182 @@ const AdminDashboard = () => {
     }
   };
 
-  // NEW: DELETE BOOKING HANDLER
+
   const handleDeleteBooking = async (id) => {
-    if (window.confirm("Do you want to delete this booking?")) {
+    if (window.confirm("Are you sure you want to permanently delete this booking?")) {
       try {
         await axios.delete(`http://localhost:5000/api/bookings/${id}`);
-        toast.success("Booking deleted successfully");
+        toast.success("Booking deleted");
         fetchData(); 
       } catch (error) {
-        toast.error("Failed to delete booking");
+        toast.error("Deletion failed");
       }
     }
   };
 
   return (
-    <div className="min-h-screen bg-gray-100">
+    <div className="min-h-screen bg-slate-50">
       <NavBar />
-      <div className="p-8">
-        <h2 className="text-3xl font-bold mb-6 text-gray-800">System Administration</h2>
+      <Toaster />
+      
+      <div className="max-w-7xl mx-auto p-6 lg:p-10">
+        <header className="mb-10">
+          <h2 className="text-4xl font-extrabold text-slate-900 tracking-tight">Admin Control Panel</h2>
+          <p className="text-slate-500 mt-2 font-medium">Manage ground verifications and system-wide bookings.</p>
+        </header>
 
-        {/* SEARCH BAR */}
-        <div className="mb-6 relative max-w-md">
-          <input 
-            type="text"
-            placeholder="Search name, phone, or location..."
-            className="w-full p-3 pl-10 rounded-xl border border-gray-300 shadow-sm focus:ring-2 focus:ring-green-500 outline-none transition-all"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
-          <span className="absolute left-3 top-3.5 text-gray-400">🔍</span>
+        {/* STATS SUMMARY (Optional but looks great) */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+          <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm shadow-slate-200/50">
+            <p className="text-sm font-bold text-slate-400 uppercase tracking-wider">Total Bookings</p>
+            <h3 className="text-3xl font-black text-slate-800">{bookings.length}</h3>
+          </div>
+          <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm shadow-slate-200/50">
+            <p className="text-sm font-bold text-slate-400 uppercase tracking-wider">Pending Grounds</p>
+            <h3 className="text-3xl font-black text-emerald-600">
+              {futsalRequests.filter(f => f.status === 'Pending').length}
+            </h3>
+          </div>
+          <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm shadow-slate-200/50">
+            <p className="text-sm font-bold text-slate-400 uppercase tracking-wider">Active Grounds</p>
+            <h3 className="text-3xl font-black text-blue-600">
+              {futsalRequests.filter(f => f.status === 'Approved').length}
+            </h3>
+          </div>
         </div>
 
-        {/* TABS NAVIGATION */}
-        <div className="flex gap-4 mb-6 border-b border-gray-300">
-          <button
-            onClick={() => setActiveTab('bookings')}
-            className={`pb-2 px-4 font-semibold transition ${activeTab === 'bookings' ? 'border-b-4 border-green-600 text-green-700' : 'text-gray-500'}`}
-          >
-            Manage Bookings
-          </button>
-          <button
-            onClick={() => setActiveTab('verifications')}
-            className={`pb-2 px-4 font-semibold transition ${activeTab === 'verifications' ? 'border-b-4 border-green-600 text-green-700' : 'text-gray-500'}`}
-          >
-            Ground Verifications ({futsalRequests.filter(f => f.status === 'Pending').length})
-          </button>
+        {/* FILTERS & SEARCH */}
+        <div className="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
+          <div className="flex bg-slate-200/50 p-1.5 rounded-2xl w-full md:w-auto">
+            <button
+              onClick={() => setActiveTab('bookings')}
+              className={`flex-1 md:flex-none px-6 py-2.5 rounded-xl text-sm font-bold transition-all ${
+                activeTab === 'bookings' 
+                ? 'bg-white text-emerald-700 shadow-sm' 
+                : 'text-slate-500 hover:text-slate-700'
+              }`}
+            >
+              Bookings
+            </button>
+            <button
+              onClick={() => setActiveTab('verifications')}
+              className={`flex-1 md:flex-none px-6 py-2.5 rounded-xl text-sm font-bold transition-all ${
+                activeTab === 'verifications' 
+                ? 'bg-white text-emerald-700 shadow-sm' 
+                : 'text-slate-500 hover:text-slate-700'
+              }`}
+            >
+              Verifications
+            </button>
+          </div>
+
+          <div className="relative w-full md:w-96">
+            <input 
+              type="text"
+              placeholder="Filter records..."
+              className="w-full pl-12 pr-4 py-3 bg-white border border-slate-200 rounded-2xl focus:ring-2 focus:ring-emerald-500 outline-none transition-all shadow-sm shadow-slate-100"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+            <span className="absolute left-4 top-3.5 opacity-40 text-xl">🔍</span>
+          </div>
         </div>
 
-        <div className="bg-white rounded-lg shadow overflow-hidden">
-          {activeTab === 'bookings' ? (
-            /* --- BOOKINGS TABLE --- */
-            <table className="w-full text-left">
-              <thead className="bg-gray-50 border-b">
-                <tr>
-                  <th className="p-4 font-semibold text-gray-600">User / Contact</th>
-                  <th className="p-4 font-semibold text-gray-600">Futsal</th>
-                  <th className="p-4 font-semibold text-gray-600">Date & Time</th>
-                  <th className="p-4 font-semibold text-gray-600">Status</th>
-                  <th className="p-4 font-semibold text-gray-600">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredBookings.map(b => (
-                  <tr key={b.id} className="border-b hover:bg-gray-50">
-                    <td className="p-4">
-                      <div className="font-bold text-gray-800">{b.User?.name}</div>
-                      <a href={`tel:${b.User?.phone}`} className="text-sm text-blue-600 hover:underline">📞 {b.User?.phone || 'No phone'}</a>
-                    </td>
-                    <td className="p-4 font-medium">{b.Futsal?.name}</td>
-                    <td className="p-4 text-sm">{b.date} <br /> <span className="text-xs text-gray-500">{b.timeSlot}</span></td>
-                    <td className="p-4">
-                      <span className={`px-2 py-1 rounded text-xs font-bold ${b.status === 'Confirmed' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>
-                        {b.status}
-                      </span>
-                    </td>
-                    <td className="p-4 flex gap-2">
-                      {/* Only show Approve/Reject for Pending */}
-                      {b.status === 'Pending' && (
-                        <>
-                          <button onClick={() => handleBookingUpdate(b.id, 'Confirmed')} className="bg-green-600 text-white px-3 py-1 rounded text-sm hover:bg-green-700">Approve</button>
-                          <button onClick={() => handleBookingUpdate(b.id, 'Rejected')} className="bg-red-500 text-white px-3 py-1 rounded text-sm hover:bg-red-600">Reject</button>
-                        </>
-                      )}
-                      {/* ALWAYS allow Admin to Delete */}
-                      <button 
-                        onClick={() => handleDeleteBooking(b.id)} 
-                        className="bg-gray-100 text-red-600 border border-red-100 px-3 py-1 rounded text-sm hover:bg-red-600 hover:text-white transition"
-                      >
-                        🗑️ Delete
-                      </button>
-                    </td>
+        {/* DATA TABLE */}
+        <div className="bg-white rounded-3xl border border-slate-100 shadow-xl shadow-slate-200/40 overflow-hidden">
+          <div className="overflow-x-auto">
+            {activeTab === 'bookings' ? (
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="bg-slate-50/50 border-b border-slate-100">
+                    <th className="p-5 text-xs font-bold uppercase tracking-wider text-slate-400">User / Contact</th>
+                    <th className="p-5 text-xs font-bold uppercase tracking-wider text-slate-400">Futsal</th>
+                    <th className="p-5 text-xs font-bold uppercase tracking-wider text-slate-400">Schedule</th>
+                    <th className="p-5 text-xs font-bold uppercase tracking-wider text-slate-400">Status</th>
+                    <th className="p-5 text-xs font-bold uppercase tracking-wider text-slate-400">Actions</th>
                   </tr>
-                ))}
-                {filteredBookings.length === 0 && (
-                   <tr><td colSpan="5" className="p-8 text-center text-gray-500">No bookings found matching "{searchTerm}"</td></tr>
-                )}
-              </tbody>
-            </table>
-          ) : (
-            /* --- VERIFICATION TABLE --- */
-            <table className="w-full text-left">
-              <thead className="bg-gray-50 border-b">
-                <tr>
-                  <th className="p-4 font-semibold text-gray-600">Photo</th>
-                  <th className="p-4 font-semibold text-gray-600">Futsal Name</th>
-                  <th className="p-4 font-semibold text-gray-600">Location & Contact</th>
-                  <th className="p-4 font-semibold text-gray-600">Price</th>
-                  <th className="p-4 font-semibold text-gray-600">Status</th>
-                  <th className="p-4 font-semibold text-gray-600">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredRequests.length > 0 ? filteredRequests.map(f => (
-                  <tr key={f.id} className="border-b hover:bg-gray-50">
-                    <td className="p-4">
-                      <div className="w-20 h-14 rounded-lg overflow-hidden border border-gray-200 bg-gray-50">
-                        <img 
-                          src={f.imageUrl} 
-                          alt="Futsal Preview" 
-                          className="w-full h-full object-cover cursor-pointer hover:opacity-80 transition"
-                          onClick={() => window.open(f.imageUrl, '_blank')}
-                        />
-                      </div>
-                    </td>
-                    <td className="p-4 font-bold text-gray-800">{f.name}</td>
-                    <td className="p-4 text-sm text-gray-600">
-                      📍 {f.location} <br /> 📞 {f.contact}
-                    </td>
-                    <td className="p-4 font-medium text-gray-800">Rs. {f.pricePerHour}</td>
-                    <td className="p-4">
-                      <span className={`px-2 py-1 rounded text-xs font-bold ${
-                        f.status === 'Approved' ? 'bg-green-100 text-green-700' :
-                        f.status === 'Rejected' ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700'
-                      }`}>
-                        {f.status}
-                      </span>
-                    </td>
-                    <td className="p-4 flex gap-2">
-                      {f.status === 'Pending' ? (
-                        <>
-                          <button onClick={() => handleFutsalVerify(f.id, 'Approved')} className="bg-green-600 text-white px-3 py-1 rounded text-sm hover:bg-green-700">Verify</button>
-                          <button onClick={() => handleFutsalVerify(f.id, 'Rejected')} className="bg-red-500 text-white px-3 py-1 rounded text-sm hover:bg-red-600">Decline</button>
-                        </>
-                      ) : (
-                        <span className="text-gray-400 text-xs italic">Completed</span>
-                      )}
-                    </td>
+                </thead>
+                <tbody className="divide-y divide-slate-50">
+                  {filteredBookings.map(b => (
+                    <tr key={b.id} className="hover:bg-slate-50/80 transition-colors">
+                      <td className="p-5">
+                        <p className="font-bold text-slate-800">{b.User?.name}</p>
+                        <p className="text-xs text-emerald-600 font-semibold">{b.User?.phone}</p>
+                      </td>
+                      <td className="p-5 font-semibold text-slate-700">{b.Futsal?.name}</td>
+                      <td className="p-5 text-sm">
+                        <span className="block font-medium text-slate-800">{b.date}</span>
+                        <span className="text-xs text-slate-400 font-bold">{b.timeSlot}</span>
+                      </td>
+                      <td className="p-5">
+                        <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${
+                          b.status === 'Confirmed' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'
+                        }`}>
+                          {b.status}
+                        </span>
+                      </td>
+                      <td className="p-5">
+                        <div className="flex gap-2">
+                          {b.status === 'Pending' && (
+                            <>
+                              <button onClick={() => handleBookingUpdate(b.id, 'Confirmed')} className="p-2 bg-emerald-50 text-emerald-600 rounded-lg hover:bg-emerald-600 hover:text-white transition-all">✓</button>
+                              <button onClick={() => handleBookingUpdate(b.id, 'Rejected')} className="p-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-600 hover:text-white transition-all">✕</button>
+                            </>
+                          )}
+                          <button onClick={() => handleDeleteBooking(b.id)} className="px-3 py-2 text-xs font-bold bg-slate-100 text-slate-500 rounded-xl hover:bg-red-500 hover:text-white transition-all">Delete</button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            ) : (
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="bg-slate-50/50 border-b border-slate-100">
+                    <th className="p-5 text-xs font-bold uppercase tracking-wider text-slate-400">Ground Detail</th>
+                    <th className="p-5 text-xs font-bold uppercase tracking-wider text-slate-400">Location</th>
+                    <th className="p-5 text-xs font-bold uppercase tracking-wider text-slate-400">Rate</th>
+                    <th className="p-5 text-xs font-bold uppercase tracking-wider text-slate-400">Status</th>
+                    <th className="p-5 text-xs font-bold uppercase tracking-wider text-slate-400">Verification</th>
                   </tr>
-                )) : (
-                  <tr><td colSpan="6" className="p-8 text-center text-gray-500">No results found matching "{searchTerm}"</td></tr>
-                )}
-              </tbody>
-            </table>
-          )}
+                </thead>
+                <tbody className="divide-y divide-slate-50">
+                  {filteredRequests.map(f => (
+                    <tr key={f.id} className="hover:bg-slate-50/80 transition-colors">
+                      <td className="p-5 flex items-center gap-4">
+                        <img src={f.imageUrl} className="w-14 h-10 rounded-lg object-cover bg-slate-100 shadow-sm" alt="" />
+                        <div>
+                          <p className="font-bold text-slate-800">{f.name}</p>
+                          <p className="text-xs text-slate-400">{f.contact}</p>
+                        </div>
+                      </td>
+                      <td className="p-5 text-sm font-medium text-slate-600">📍 {f.location}</td>
+                      <td className="p-5 text-sm font-bold text-slate-800">Rs. {f.pricePerHour}</td>
+                      <td className="p-5">
+                        <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${
+                          f.status === 'Approved' ? 'bg-blue-100 text-blue-700' : 
+                          f.status === 'Rejected' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'
+                        }`}>
+                          {f.status}
+                        </span>
+                      </td>
+                      <td className="p-5">
+                        {f.status === 'Pending' ? (
+                          <div className="flex gap-2">
+                            <button onClick={() => handleFutsalVerify(f.id, 'Approved')} className="px-4 py-2 bg-emerald-600 text-white text-xs font-bold rounded-xl hover:shadow-lg hover:shadow-emerald-200 transition-all">Approve</button>
+                            <button onClick={() => handleFutsalVerify(f.id, 'Rejected')} className="px-4 py-2 bg-slate-100 text-slate-500 text-xs font-bold rounded-xl hover:bg-red-50 hover:text-red-600 transition-all">Decline</button>
+                          </div>
+                        ) : (
+                          <span className="text-[10px] font-bold text-slate-300 uppercase italic">Review Complete</span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
         </div>
       </div>
     </div>
