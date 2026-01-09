@@ -6,6 +6,7 @@ const User = require('../models/User'); // <--- ADD THIS IMPORT
 router.post('/register', authController.register);
 router.post('/login', authController.login);
 router.post('/forgot-password', authController.forgotPassword);
+router.post('/reset-password/:token', authController.resetPassword);
 
 // 1. GET User Data (to show current info on the Profile page)
 router.get('/user/:id', async (req, res) => {

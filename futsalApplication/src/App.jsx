@@ -13,6 +13,7 @@ import OwnerDashboard from './components/OwnerDashboard';
 import ProtectedRoute from './components/ProtectedRoute';
 import { Toaster } from 'react-hot-toast';
 import Profile from './components/Profile';
+import UserResetP from './components/UserResetP';
 
 
 function App() {
@@ -31,6 +32,7 @@ function App() {
         <Route path="/login" element={<UserLogin />} />
         <Route path="/signup" element={<UserRegistration />} />
         <Route path="/forgot-password" element={<UserForgetP />} />
+        <Route path="/reset-password/:token" element={<UserResetP />} />
 
         {/* You will add your Dashboard routes here later */}
         <Route 

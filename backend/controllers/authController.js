@@ -3,6 +3,8 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 
 const nodemailer = require('nodemailer');
+const { Op } = require('sequelize');
+const crypto = require('crypto');
 
 
 exports.register = async (req, res) => {
@@ -44,34 +46,90 @@ exports.login = async (req, res) => {
   }
 };
 
+
 exports.forgotPassword = async (req, res) => {
-  console.log("Attempting email with:", process.env.EMAIL_USER);
+
   try {
     const { email } = req.body;
     const user = await User.findOne({ where: { email } });
-    if (!user) return res.status(404).json({ message: 'User not found' });
+
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
 
     
+    const token = crypto.randomBytes(20).toString('hex');
+
+   
+    user.resetPasswordToken = token;
+    user.resetPasswordExpires = Date.now() + 3600000; 
+    await user.save();
+
     const transporter = nodemailer.createTransport({
-      service: 'gmail',
+      host: "smtp.gmail.com",
+      port: 465,
+      secure: true,
       auth: {
         user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS 
+        pass: process.env.EMAIL_PASS,
+      },
+      tls: {
+        rejectUnauthorized: false
       }
     });
 
+    const resetUrl = `http://localhost:3000/reset-password/${token}`;
+
     const mailOptions = {
-      from: process.env.EMAIL_USER,
+      from: `"Futsal App" <${process.env.EMAIL_USER}>`,
       to: email,
-      subject: 'Futsal App - Password Reset',
-      text: `Hello ${user.name}, you requested a password reset.`
+      subject: 'Password Reset Request',
+      html: `
+        <div style="font-family: Arial, sans-serif; padding: 20px; border: 1px solid #eee; border-radius: 10px; max-width: 500px;">
+          <h2 style="color: #10b981; text-align: center;">Password Reset</h2>
+          <p>You requested to reset your password. Please click the button below to proceed:</p>
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="${resetUrl}" style="background-color: #10b981; color: white; padding: 12px 25px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block;">Reset My Password</a>
+          </div>
+          <p style="font-size: 12px; color: #666;">This link will expire in 1 hour. If you did not request this, please ignore this email.</p>
+          <hr style="border: none; border-top: 1px solid #eee; margin-top: 20px;">
+          <p style="font-size: 11px; color: #999; text-align: center;">Futsal Connect Team</p>
+        </div>
+      `
     };
 
     await transporter.sendMail(mailOptions);
     res.status(200).json({ message: 'Reset link sent to your email!' });
 
   } catch (error) {
-    console.error("Detailed Email Error:", error); 
-    res.status(500).json({ message: 'Email service failed. Please check server logs.' });
+    res.status(500).json({ message: 'Failed to send email. Please try again later.' });
+  }
+};
+
+exports.resetPassword = async (req, res) => {
+  try {
+    const { token } = req.params;
+    const { password } = req.body;
+
+    const user = await User.findOne({
+      where: {
+        resetPasswordToken: token,
+        resetPasswordExpires: { [Op.gt]: Date.now() }
+      }
+    });
+
+    if (!user) {
+      return res.status(400).json({ message: 'Reset link is invalid or has expired.' });
+    }
+
+   
+    user.password = password;
+    user.resetPasswordToken = null;
+    user.resetPasswordExpires = null;
+    await user.save();
+
+    res.status(200).json({ message: 'Password updated successfully!' });
+  } catch (error) {
+    res.status(500).json({ message: 'An error occurred during reset.' });
   }
 };
