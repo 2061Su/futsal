@@ -17,6 +17,20 @@ const UserRegistration = () => {
 
   const handleRegister = async (e) => {
     e.preventDefault();
+
+     if (!formData.email.includes('@')) {
+      toast.error('Please enter a valid email containing @');
+      return;
+    }
+
+    // 2. Password Complexity Validation
+    // Requires: 8+ chars, 1 uppercase, 1 lowercase, 1 number, 1 special char
+    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+    
+    if (!passwordRegex.test(formData.password)) {
+      toast.error('Password must be 8+ characters with Uppercase, Lowercase, Number, and Symbol.');
+      return;
+    }
     
     if (!formData.acceptedTerms) {
       toast.error('You must accept the Privacy Policy and Terms.');
@@ -62,7 +76,7 @@ const UserRegistration = () => {
               <input 
                 type="text" 
                 required 
-                placeholder="John Doe"
+                placeholder="Name"
                 className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-emerald-500 focus:bg-white outline-none transition-all" 
                 value={formData.name} 
                 onChange={(e) => setFormData({...formData, name: e.target.value})} 
