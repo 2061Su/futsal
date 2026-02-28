@@ -26,17 +26,17 @@ const Futsal = sequelize.define('Futsal', {
     type: DataTypes.INTEGER, 
     allowNull: false 
   },
-  // This is the key field for your verification system
+  
   status: {
     type: DataTypes.ENUM('Pending', 'Approved', 'Rejected'),
     defaultValue: 'Pending' 
   },
   imageUrl: {
   type: DataTypes.STRING,
-  allowNull: true, // Optional, in case they don't upload one
+  allowNull: true, 
   defaultValue: 'https://via.placeholder.com/400x250?text=No+Image+Available'
 },
-  // Link to the user who owns it
+
   ownerId: {
     type: DataTypes.INTEGER,
     allowNull: false

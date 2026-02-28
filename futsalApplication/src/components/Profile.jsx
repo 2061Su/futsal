@@ -23,7 +23,7 @@ const Profile = () => {
       // 2. If Owner, Fetch their ground
       if (userRole === 'FutsalAdmin') {
         const futsalRes = await axios.get(`http://localhost:5000/api/futsals/owner/${userId}`);
-        // Ensure you have a route in backend for this: GET /api/futsals/owner/:ownerId
+        
         if (futsalRes.data) setMyFutsal(futsalRes.data);
       }
     } catch (error) {

@@ -9,6 +9,8 @@ const AdminDashboard = () => {
   const [activeTab, setActiveTab] = useState('bookings'); 
   const [searchTerm, setSearchTerm] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [editingId, setEditingId] = useState(null);
+const [editData, setEditData] = useState({ date: '', timeSlot: '' });
 
   const fetchData = async () => {
     setIsLoading(true);
@@ -29,6 +31,25 @@ const AdminDashboard = () => {
   useEffect(() => {
     fetchData();
   }, []);
+  const TIME_SLOTS = [
+  "06:00 AM - 07:00 AM", "07:00 AM - 08:00 AM", "08:00 AM - 09:00 AM",
+  "09:00 AM - 10:00 AM", "10:00 AM - 11:00 AM", "11:00 AM - 12:00 PM",
+  "12:00 PM - 01:00 PM", "01:00 PM - 02:00 PM", "02:00 PM - 03:00 PM",
+  "03:00 PM - 04:00 PM", "04:00 PM - 05:00 PM", "05:00 PM - 06:00 PM",
+  "06:00 PM - 07:00 PM", "07:00 PM - 08:00 PM", "08:00 PM - 09:00 PM",
+  "09:00 PM - 10:00 PM"
+];
+
+  const handleAdminUpdateSave = async (id) => {
+    try {
+      await axios.put(`http://localhost:5000/api/bookings/${id}`, editData);
+      toast.success("Booking rescheduled");
+      setEditingId(null);
+      fetchData(); // Refresh table
+    } catch (error) {
+      toast.error("Update failed");
+    }
+  };
 
   
   const filteredBookings = bookings.filter(b => 
@@ -168,9 +189,58 @@ const AdminDashboard = () => {
                       </td>
                       <td className="p-5 font-semibold text-slate-700">{b.Futsal?.name}</td>
                       <td className="p-5 text-sm">
-                        <span className="block font-medium text-slate-800">{b.date}</span>
-                        <span className="text-xs text-slate-400 font-bold">{b.timeSlot}</span>
-                      </td>
+                            {editingId === b.id ? (
+                              /* --- EDIT MODE --- */
+                              <div className="flex flex-col gap-2 bg-slate-50 p-2 rounded-xl border border-emerald-100">
+                                <input 
+                                  type="date" 
+                                  className="text-xs p-1.5 border rounded-lg outline-none focus:ring-1 focus:ring-emerald-500"
+                                  value={editData.date}
+                                  onChange={(e) => setEditData({...editData, date: e.target.value})}
+                                />
+                                <select 
+                                  className="text-xs p-1.5 border rounded-lg outline-none focus:ring-1 focus:ring-emerald-500 bg-white"
+                                  value={editData.timeSlot}
+                                  onChange={(e) => setEditData({...editData, timeSlot: e.target.value})}
+                                >
+                                  {TIME_SLOTS.map(slot => (
+                                    <option key={slot} value={slot}>{slot}</option>
+                                  ))}
+                                </select>
+                                <div className="flex gap-1 mt-1">
+                                  <button 
+                                    onClick={() => handleAdminUpdateSave(b.id)} 
+                                    className="flex-1 text-[10px] bg-emerald-600 text-white py-1 rounded-md font-bold hover:bg-emerald-700"
+                                  >
+                                    Save
+                                  </button>
+                                  <button 
+                                    onClick={() => setEditingId(null)} 
+                                    className="flex-1 text-[10px] bg-slate-200 text-slate-600 py-1 rounded-md font-bold"
+                                  >
+                                    Cancel
+                                  </button>
+                                </div>
+                              </div>
+                            ) : (
+                              /* --- VIEW MODE --- */
+                              <div className="group relative">
+                                <span className="block font-medium text-slate-800">{b.date}</span>
+                                <span className="text-xs text-slate-400 font-bold">{b.timeSlot}</span>
+                                
+                                {/* Reschedule Button - Always visible for Admin/Futsal Admin */}
+                                <button 
+                                  onClick={() => { 
+                                    setEditingId(b.id); 
+                                    setEditData({ date: b.date, timeSlot: b.timeSlot }); 
+                                  }}
+                                  className="mt-2 flex items-center gap-1 text-[10px] font-black uppercase tracking-wider text-emerald-600 hover:text-emerald-700 transition-colors"
+                                >
+                                  <span>✎</span> Reschedule
+                                </button>
+                              </div>
+                            )}
+                          </td>
                       <td className="p-5">
                         <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${
                           b.status === 'Confirmed' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'

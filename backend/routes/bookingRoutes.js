@@ -117,5 +117,25 @@ router.delete('/:id', async (req, res) => {
 });
 
 
+router.put('/:id', async (req, res) => {
+  try {
+    const { date, timeSlot, status } = req.body;
+    const booking = await Booking.findByPk(req.params.id);
+
+    if (!booking) return res.status(404).json({ message: "Booking not found" });
+
+   
+    if (date) booking.date = date;
+    if (timeSlot) booking.timeSlot = timeSlot;
+    if (status) booking.status = status;
+
+    await booking.save();
+    res.json({ message: "Booking updated successfully", booking });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+
 
 module.exports = router;

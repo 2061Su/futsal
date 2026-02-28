@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import axios from 'axios';
 import { toast, Toaster } from 'react-hot-toast';
 import { useNavigate, Link } from 'react-router-dom';
-import Logo from '../assets/Logo.png'; // Importing your logo
+import Logo from '../assets/Logo.png'; 
 
 const UserRegistration = () => {
   const [formData, setFormData] = useState({ 
@@ -23,8 +23,6 @@ const UserRegistration = () => {
       return;
     }
 
-    // 2. Password Complexity Validation
-    // Requires: 8+ chars, 1 uppercase, 1 lowercase, 1 number, 1 special char
     const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
     
     if (!passwordRegex.test(formData.password)) {

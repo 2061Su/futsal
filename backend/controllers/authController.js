@@ -9,18 +9,17 @@ const crypto = require('crypto');
 
 exports.register = async (req, res) => {
   try {
-      const { name, email, password, role } = req.body; // Receive role from frontend
+      const { name, email, password, role } = req.body; 
       
       const userExists = await User.findOne({ where: { email } });
       if (userExists) return res.status(400).json({ message: 'User already exists' });
 
-    // REMOVE THE MANUAL HASHING HERE
-    // Just pass the plain password; the User Model Hook will hash it automatically
+   
     await User.create({ 
       name, 
       email, 
-      password, // Model hook handles hashing
-      role: role || 'Player' // Use selected role or fallback to Player
+      password, 
+      role: role || 'Player' 
     });
     
     res.status(201).json({ message: "User created successfully" });

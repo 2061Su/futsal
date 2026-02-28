@@ -1,9 +1,9 @@
 const request = require('supertest');
 const express = require('express');
-const bookingRoutes = require('../routes/bookingRoutes'); // Path to your route file
+const bookingRoutes = require('../routes/bookingRoutes'); 
 const Booking = require('../models/Booking');
 
-// Mock the models
+
 jest.mock('../models/Booking');
 jest.mock('../models/Futsal');
 jest.mock('../models/User');
@@ -18,7 +18,7 @@ describe('Booking Routes Integration Tests', () => {
     jest.clearAllMocks();
   });
 
-  // Test 1: Get User Bookings
+
   describe('GET /bookings/user/:userId', () => {
     test('should return 400 if userId is invalid', async () => {
       const res = await request(app).get('/bookings/user/undefined');
@@ -37,7 +37,7 @@ describe('Booking Routes Integration Tests', () => {
     });
   });
 
-  // Test 2: Create Booking (The conflict check logic)
+ 
   describe('POST /bookings', () => {
     const newBookingData = {
       futsalId: 1,
@@ -48,7 +48,7 @@ describe('Booking Routes Integration Tests', () => {
     };
 
     test('should create booking if no conflict exists', async () => {
-      Booking.findOne.mockResolvedValue(null); // No conflict found
+      Booking.findOne.mockResolvedValue(null); 
       Booking.create.mockResolvedValue({ id: 99, ...newBookingData, status: 'Pending' });
 
       const res = await request(app)
@@ -60,7 +60,7 @@ describe('Booking Routes Integration Tests', () => {
     });
 
     test('should block booking if slot is already confirmed', async () => {
-      Booking.findOne.mockResolvedValue({ id: 10, status: 'Confirmed' }); // Conflict found
+      Booking.findOne.mockResolvedValue({ id: 10, status: 'Confirmed' }); 
 
       const res = await request(app)
         .post('/bookings')
@@ -71,7 +71,7 @@ describe('Booking Routes Integration Tests', () => {
     });
   });
 
-  // Test 3: Update Status
+ 
   describe('PATCH /bookings/:id', () => {
     test('should update booking status successfully', async () => {
       const mockBooking = { 
@@ -87,6 +87,56 @@ describe('Booking Routes Integration Tests', () => {
 
       expect(res.statusCode).toBe(200);
       expect(mockBooking.status).toBe('Confirmed');
+    });
+  });
+
+  
+  describe('PUT /bookings/:id', () => {
+    test('should reschedule a booking and update date/time', async () => {
+      const mockBooking = { 
+        id: 25, 
+        date: '2026-05-20', 
+        timeSlot: '06:00 AM - 07:00 AM',
+        save: jest.fn().mockResolvedValue(true) 
+      };
+      Booking.findByPk.mockResolvedValue(mockBooking);
+
+      const updateData = { 
+        date: '2026-05-21', 
+        timeSlot: '08:00 PM - 09:00 PM' 
+      };
+
+      const res = await request(app)
+        .put('/bookings/25')
+        .send(updateData);
+
+      expect(res.statusCode).toBe(200);
+      expect(mockBooking.date).toBe('2026-05-21');
+      expect(mockBooking.timeSlot).toBe('08:00 PM - 09:00 PM');
+      expect(res.body.message).toBe("Booking updated successfully");
+    });
+
+    test('should return 404 if booking to update does not exist', async () => {
+      Booking.findByPk.mockResolvedValue(null);
+      const res = await request(app).put('/bookings/999').send({ date: '2026-01-01' });
+      expect(res.statusCode).toBe(404);
+    });
+  });
+
+  
+  describe('DELETE /bookings/:id', () => {
+    test('should delete a booking successfully', async () => {
+      Booking.destroy.mockResolvedValue(1); 
+
+      const res = await request(app).delete('/bookings/1');
+      expect(res.statusCode).toBe(200);
+      expect(res.body.message).toBe("Booking removed successfully");
+    });
+
+    test('should return 404 if booking to delete is not found', async () => {
+      Booking.destroy.mockResolvedValue(0); 
+      const res = await request(app).delete('/bookings/999');
+      expect(res.statusCode).toBe(404);
     });
   });
 });

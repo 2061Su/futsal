@@ -1,18 +1,18 @@
 const express = require('express');
 const router = express.Router();
 const authController = require('../controllers/authController');
-const User = require('../models/User'); // <--- ADD THIS IMPORT
+const User = require('../models/User'); 
 
 router.post('/register', authController.register);
 router.post('/login', authController.login);
 router.post('/forgot-password', authController.forgotPassword);
 router.post('/reset-password/:token', authController.resetPassword);
 
-// 1. GET User Data (to show current info on the Profile page)
+
 router.get('/user/:id', async (req, res) => {
   try {
     const user = await User.findByPk(req.params.id, {
-      attributes: ['name', 'email', 'phone', 'role'] // Exclude password for security
+      attributes: ['name', 'email', 'phone', 'role']
     });
     if (!user) return res.status(404).json({ message: "User not found" });
     res.json(user);
@@ -21,7 +21,7 @@ router.get('/user/:id', async (req, res) => {
   }
 });
 
-// 2. UPDATE User Profile (Phone number)
+
 router.put('/profile/:id', async (req, res) => {
   try {
     const { phone, name } = req.body;

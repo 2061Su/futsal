@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import axios from 'axios'; 
 import { toast } from 'react-hot-toast'; 
 import { useNavigate, Link } from 'react-router-dom'; 
-import Logo from '../assets/Logo.png'; // Importing your logo
+import Logo from '../assets/Logo.png'; 
 
 const UserLogin = () => {
   const [email, setEmail] = useState('');

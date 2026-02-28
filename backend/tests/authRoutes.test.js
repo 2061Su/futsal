@@ -4,7 +4,7 @@ const authRoutes = require('../routes/authRoutes');
 const User = require('../models/User');
 const authController = require('../controllers/authController');
 
-// 1. Mock the User model and the Auth Controller
+
 jest.mock('../models/User');
 jest.mock('../controllers/authController', () => ({
   register: jest.fn((req, res) => res.status(201).json({ message: 'Success' })),
@@ -46,7 +46,7 @@ describe('Auth Routes Integration Tests', () => {
 
       expect(res.statusCode).toBe(200);
       expect(res.body).toEqual(mockUser);
-      // Verify that findByPk was called with the specific attributes for security
+      
       expect(User.findByPk).toHaveBeenCalledWith("1", expect.objectContaining({
         attributes: ['name', 'email', 'phone', 'role']
       }));
@@ -56,7 +56,7 @@ describe('Auth Routes Integration Tests', () => {
       User.findByPk.mockResolvedValue(null);
       const res = await request(app).get('/api/auth/user/999');
       expect(res.statusCode).toBe(404);
-      expect(res.body.message).toBe("User not found"); // This matches your logic if it fails
+      expect(res.body.message).toBe("User not found"); 
     });
   });
 
@@ -89,11 +89,11 @@ describe('Auth Routes Integration Tests', () => {
       };
       User.findByPk.mockResolvedValue(mockUser);
 
-      // Sending only phone, name is missing
+      
       await request(app).put('/api/auth/profile/1').send({ phone: '000' });
 
       expect(mockUser.phone).toBe('000');
-      expect(mockUser.name).toBe('John'); // Should remain unchanged
+      expect(mockUser.name).toBe('John'); 
     });
   });
 });

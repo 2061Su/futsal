@@ -3,11 +3,11 @@ const express = require('express');
 const futsalRoutes = require('../routes/futsalRoutes');
 const Futsal = require('../models/Futsal');
 
-// 1. Mock the Cloudinary/Multer middleware BEFORE requiring the routes
+
 jest.mock('../config/cloudinary', () => ({
   upload: {
     single: () => (req, res, next) => {
-      // Simulate a file being uploaded
+      
       if (req.body.simulateUpload) {
         req.file = { path: 'https://cloudinary.com/fake-image.jpg' };
       }
@@ -45,7 +45,7 @@ describe('Futsal Routes Integration Tests', () => {
 
   describe('POST /futsals/add', () => {
     test('should return 400 if owner already has a registered futsal', async () => {
-      // Simulate owner already having a record
+     
       Futsal.findOne.mockResolvedValue({ id: 1, ownerId: 10 });
 
       const res = await request(app)
@@ -57,7 +57,7 @@ describe('Futsal Routes Integration Tests', () => {
     });
 
     test('should create a new futsal with a placeholder image if no file is provided', async () => {
-      Futsal.findOne.mockResolvedValue(null); // No existing record
+      Futsal.findOne.mockResolvedValue(null); 
       Futsal.create.mockResolvedValue({ id: 1, name: 'Stadium 5', status: 'Pending' });
 
       const res = await request(app)
@@ -66,7 +66,7 @@ describe('Futsal Routes Integration Tests', () => {
 
       expect(res.statusCode).toBe(201);
       expect(res.body.status).toBe('Pending');
-      // Verify placeholder was used in the call
+     
       expect(Futsal.create).toHaveBeenCalledWith(expect.objectContaining({
         imageUrl: 'https://via.placeholder.com/400x250?text=No+Image+Available'
       }));
@@ -89,7 +89,7 @@ describe('Futsal Routes Integration Tests', () => {
 
       expect(res.statusCode).toBe(200);
       expect(mockFutsal.name).toBe('New Name');
-      expect(mockFutsal.status).toBe('Pending'); // Check logic: status resets on image change
+      expect(mockFutsal.status).toBe('Pending'); 
       expect(mockFutsal.save).toHaveBeenCalled();
     });
   });

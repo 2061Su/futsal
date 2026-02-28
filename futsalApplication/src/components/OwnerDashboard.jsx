@@ -9,8 +9,19 @@ const OwnerDashboard = () => {
   const [myFutsal, setMyFutsal] = useState(null);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [editingId, setEditingId] = useState(null);
+  const [editData, setEditData] = useState({ date: '', timeSlot: '' });
   
   const userId = localStorage.getItem('userId');
+  const TIME_SLOTS = [
+  "06:00 AM - 07:00 AM", "07:00 AM - 08:00 AM", "08:00 AM - 09:00 AM",
+  "09:00 AM - 10:00 AM", "10:00 AM - 11:00 AM", "11:00 AM - 12:00 PM",
+  "12:00 PM - 01:00 PM", "01:00 PM - 02:00 PM", "02:00 PM - 03:00 PM",
+  "03:00 PM - 04:00 PM", "04:00 PM - 05:00 PM", "05:00 PM - 06:00 PM",
+  "06:00 PM - 07:00 PM", "07:00 PM - 08:00 PM", "08:00 PM - 09:00 PM",
+  "09:00 PM - 10:00 PM"
+];
+
 
   const fetchOwnerData = async () => {
     try {
@@ -49,6 +60,16 @@ const OwnerDashboard = () => {
     b.User?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     b.User?.phone?.includes(searchTerm)
   );
+  const handleUpdateSave = async (id) => {
+  try {
+    await axios.put(`http://localhost:5000/api/bookings/${id}`, editData);
+    toast.success("Schedule updated successfully!");
+    setEditingId(null);
+    fetchOwnerData(); // Refresh the table
+  } catch (error) {
+    toast.error(error.response?.data?.message || "Update failed");
+  }
+};
 
   const handleStatusUpdate = async (id, newStatus) => {
     try {
@@ -181,10 +202,57 @@ const OwnerDashboard = () => {
                         <p className="text-xs font-semibold text-emerald-600">{b.User?.phone}</p>
                       </td>
                       <td className="p-6">
-                        <p className="text-sm font-bold text-slate-700">{b.date}</p>
-                        <p className="text-xs font-medium text-slate-400 uppercase">{b.timeSlot}</p>
-                      </td>
-                      <td className="p-6">
+                              {editingId === b.id ? (
+                                
+                                <div className="flex flex-col gap-2 min-w-[150px]">
+                                  <input 
+                                    type="date" 
+                                    className="text-xs p-2 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500"
+                                    value={editData.date}
+                                    onChange={(e) => setEditData({...editData, date: e.target.value})}
+                                  />
+                                  <select 
+                                    className="text-xs p-2 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500 bg-white"
+                                    value={editData.timeSlot}
+                                    onChange={(e) => setEditData({...editData, timeSlot: e.target.value})}
+                                  >
+                                    {TIME_SLOTS.map(slot => (
+                                      <option key={slot} value={slot}>{slot}</option>
+                                    ))}
+                                  </select>
+                                  <div className="flex gap-2">
+                                    <button 
+                                      onClick={() => handleUpdateSave(b.id)} 
+                                      className="bg-emerald-600 text-white text-[10px] px-3 py-1.5 rounded-lg font-bold flex-1"
+                                    >
+                                      Save
+                                    </button>
+                                    <button 
+                                      onClick={() => setEditingId(null)} 
+                                      className="bg-slate-100 text-slate-500 text-[10px] px-3 py-1.5 rounded-lg font-bold flex-1"
+                                    >
+                                      Cancel
+                                    </button>
+                                  </div>
+                                </div>
+                              ) : (
+                                
+                                <div className="group relative">
+                                  <p className="text-sm font-bold text-slate-700">{b.date}</p>
+                                  <p className="text-xs font-medium text-slate-400 uppercase">{b.timeSlot}</p>
+                                  <button 
+                                    onClick={() => {
+                                      setEditingId(b.id);
+                                      setEditData({ date: b.date, timeSlot: b.timeSlot });
+                                    }}
+                                    className="mt-2 text-[10px] font-black uppercase text-emerald-600 hover:text-emerald-700 flex items-center gap-1"
+                                  >
+                                    <span>✎</span> Reschedule
+                                  </button>
+                                </div>
+                              )}
+                            </td>
+                          <td className="p-6">
                         <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${
                           b.status === 'Confirmed' ? 'bg-emerald-100 text-emerald-700' : 
                           b.status === 'Rejected' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'
@@ -238,5 +306,4 @@ const OwnerDashboard = () => {
     </div>
   );
 };
-
 export default OwnerDashboard;

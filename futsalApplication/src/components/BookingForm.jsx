@@ -70,7 +70,7 @@ const BookingForm = () => {
         headers: { Authorization: `Bearer ${token}` }
       });
 
-      // Update phone in profile if it was changed
+      
       await axios.put(`http://localhost:5000/api/auth/profile/${userId}`, {
         phone: bookingData.phone
       });
